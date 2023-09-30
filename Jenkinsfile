@@ -1,20 +1,32 @@
-node {
-    def dockerImage = 'node:16-buster-slim'
-
-    stage('Checkout') {
-        // Assuming you want to check out your code from a Git repository
-        checkout scm
-    }
-
-    stage('Build') {
-        docker.image(dockerImage).inside('-p 3000:3000') {
-            sh 'npm install'
+pipeline {
+    agent {
+        docker {
+            image 'node:16-buster-slim'
+            args '-p 3000:3000'
         }
     }
-
-    stage('Test') {
-        docker.image(dockerImage).inside('-p 3000:3000') {
-            sh './jenkins/scripts/test.sh'
+    stages {
+        stage('Build') {
+            steps {
+                sh 'npm install'
+            }
+        }
+        stage('Test') { 
+            steps {
+                sh './jenkins/scripts/test.sh' 
+            }
+        }
+        stage('Manual Approval') {
+            steps {
+                input message: 'Lanjutkan ke tahap Deploy?'
+            }
+        }
+               stage('Deploy') {
+            steps {
+                sh './jenkins/scripts/deliver.sh'
+                sleep(time: 1, unit: 'MINUTES')
+                sh './jenkins/scripts/kill.sh'
+            }
         }
     }
 }
